@@ -178,13 +178,15 @@ body {
 const FALLBACK_THUMB = 'thumbs/Default.gif';
 
 const channels = {
-    Metal: {
+    Thrash Metal: {
         defaultThumb: 'thumbs/Default.gif',
         tracks: [
-            { file: 'mp3/metal/EtherealHordes.mp3', title: 'Ethereal Hordes', thumb: 'thumbs/metal/EtherealHordes.jpg' },
-            { file: 'mp3/metal/MarchoftheGolgothanCavalry.mp3', title: 'March of the Golgothan Cavalry', thumb: 'thumbs/metal/MarchoftheGolgothanCavalry.jpg' },
-            { file: 'mp3/metal/Shadowseternal.mp3', title: 'Shadows eternal', thumb: 'thumbs/metal/Shadowseternal.jpg' },
-            { file: 'mp3/metal/Inquisition-IncenseofRest.mp3', title: 'Inquisition - Incense of Rest', thumb: 'thumbs/metal/.jpg' }
+            { file: 'mp3/thrash metal/Exodus - Fabulous Disaster.mp3', title: 'Exodus - Fabulous Disaster', thumb: 'thumbs/thrash metal/Exodus - Fabulous Disaster.jpg' },
+            { file: 'mp3/thrash metal/Anthrax - Caught In A Mosh.mp3', title: 'Anthrax - Caught In A Mosh', thumb: 'thumbs/thrash metal/Anthrax - Caught In A Mosh.jpg' },
+            { file: 'mp3/thrash metal/Evildead - Gone Shooting.mp3', title: 'Evildead - Gone Shooting', thumb: 'thumbs/thrash metal/Evildead - Gone Shooting.jpg' },
+            { file: 'mp3/thrash metal/Mortal Sin - Voyage of the Disturbed.mp3', title: 'Mortal Sin - Voyage of the Disturbed', thumb: 'thumbs/thrash metal/Mortal Sin - Voyage of the Disturbed.jpg' },
+            { file: 'mp3/thrash metal/Lich King - We Came To Conquer.mp3', title: 'Lich King - We Came To Conquer', thumb: 'thumbs/thrash metal/Lich King - We Came To Conquer.jpg' },
+            { file: 'mp3/thrash metal/Sodom - Agent Orange.mp3', title: 'Sodom - Agent Orange', thumb: 'thumbs/thrash metal/Sodom - Agent Orange.jpg' }
         ]
     },
     Rock: {
@@ -199,7 +201,7 @@ const channels = {
 
 /* ================= STATE ================= */
 
-let currentChannel = 'Metal';
+let currentChannel = 'Thrash Metal';
 let playlist = channels[currentChannel].tracks;
 let currentIndex = 0;
 
@@ -349,6 +351,7 @@ playTrack(0);
 
 </body>
 </html>
+
 
 
 
