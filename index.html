@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark MP3 Player</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="player-container">
+        <h1>🎵 Dark MP3 Player</h1>
+
+        <!-- Album Art -->
+        <div class="album-art">
+            <img id="cover" src="music/covers/song1.jpg" alt="Album Art">
+        </div>
+
+        <!-- Song Info -->
+        <div class="song-info">
+            <span id="songName">Song 1</span>
+        </div>
+
+        <!-- Audio Player (hidden) -->
+        <audio id="audioPlayer" autoplay></audio>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="prev">⏮</button>
+            <button id="playPause">▶️</button>
+            <button id="next">⏭</button>
+            <button id="shuffle">🔀</button>
+            <button id="loop">🔁</button>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress-container">
+            <span id="currentTime">0:00</span>
+            <input type="range" id="progressBar" value="0" min="0" max="100">
+            <span id="duration">0:00</span>
+        </div>
+
+        <!-- Volume -->
+        <div class="volume-control">
+            🔊 <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+        </div>
+
+        <!-- Playlist -->
+        <ul id="playlist"></ul>
+    </div>
+
+<script>
+    const audioPlayer = document.getElementById('audioPlayer');
+    const playlistEl = document.getElementById('playlist');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const shuffleBtn = document.getElementById('shuffle');
+    const loopBtn = document.getElementById('loop');
+    const playPauseBtn = document.getElementById('playPause');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const volumeSlider = document.getElementById('volume');
+    const songNameEl = document.getElementById('songName');
+    const coverImg = document.getElementById('cover');
+
+    const songs = [
+        { name: "Song 1", src: "music/song1.mp3", cover: "music/covers/song1.jpg" },
+        { name: "Song 2", src: "music/song2.mp3", cover: "music/covers/song2.jpg" },
+        { name: "Song 3", src: "music/song3.mp3", cover: "music/covers/song3.jpg" }
+    ];
+
+    let currentIndex = 0;
+    let isShuffle = false;
+    let isLoop = false;
+    let isPlaying = false;
+
+    // Populate playlist
+    songs.forEach((song, index) => {
+        const li = document.createElement('li');
+        li.textContent = song.name;
+        li.addEventListener('click', () => {
+            currentIndex = index;
+            playSong(currentIndex);
+        });
+        playlistEl.appendChild(li);
+    });
+
+    function playSong(index) {
+        audioPlayer.src = songs[index].src;
+        audioPlayer.play();
+        isPlaying = true;
+        playPauseBtn.textContent = "⏸";
+        songNameEl.textContent = songs[index].name;
+        coverImg.src = songs[index].cover;
+        highlightSong(index);
+    }
+
+    function highlightSong(index) {
+        Array.from(playlistEl.children).forEach((li, i) => {
+            li.style.fontWeight = i === index ? 'bold' : 'normal';
+            li.style.color = i === index ? '#1DB954' : '#fff';
+        });
+    }
+
+    function playNext() {
+        if (isShuffle) {
+            currentIndex = Math.floor(Math.random() * songs.length);
+        } else {
+            currentIndex = (currentIndex + 1) % songs.length;
+        }
+        playSong(currentIndex);
+    }
+
+    function playPrev() {
+        if (isShuffle) {
+            currentIndex = Math.floor(Math.random() * songs.length);
+        } else {
+            currentIndex = (currentIndex - 1 + songs.length) % songs.length;
+        }
+        playSong(currentIndex);
+    }
+
+    // Button events
+    nextBtn.addEventListener('click', playNext);
+    prevBtn.addEventListener('click', playPrev);
+
+    shuffleBtn.addEventListener('click', () => {
+        isShuffle = !isShuffle;
+        shuffleBtn.style.background = isShuffle ? '#1DB954' : '';
+    });
+
+    loopBtn.addEventListener('click', () => {
+        isLoop = !isLoop;
+        loopBtn.style.background = isLoop ? '#1DB954' : '';
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+        if (isPlaying) {
+            audioPlayer.pause();
+            playPauseBtn.textContent = "▶️";
+        } else {
+            audioPlayer.play();
+            playPauseBtn.textContent = "⏸";
+        }
+        isPlaying = !isPlaying;
+    });
+
+    audioPlayer.addEventListener('timeupdate', () => {
+        const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progressBar.value = progressPercent || 0;
+
+        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        durationEl.textContent = formatTime(audioPlayer.duration);
+    });
+
+    progressBar.addEventListener('input', () => {
+        audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
+    });
+
+    volumeSlider.addEventListener('input', () => {
+        audioPlayer.volume = volumeSlider.value;
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+        if (isLoop) {
+            playSong(currentIndex);
+        } else {
+            playNext();
+        }
+    });
+
+    function formatTime(time) {
+        if (isNaN(time)) return "0:00";
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    }
+
+    // Start first song
+    playSong(currentIndex);
+</script>
+document.addEventListener('keydown', (e) => {
+    switch(e.code) {
+        case 'Space':
+            e.preventDefault(); // Prevent page scrolling
+            playPauseBtn.click();
+            break;
+        case 'ArrowRight':
+            playNext();
+            break;
+        case 'ArrowLeft':
+            playPrev();
+            break;
+        case 'ArrowUp':
+            audioPlayer.volume = Math.min(audioPlayer.volume + 0.05, 1);
+            volumeSlider.value = audioPlayer.volume;
+            break;
+        case 'ArrowDown':
+            audioPlayer.volume = Math.max(audioPlayer.volume - 0.05, 0);
+            volumeSlider.value = audioPlayer.volume;
+            break;
+        case 'KeyL': // Toggle loop
+            loopBtn.click();
+            break;
+        case 'KeyS': // Toggle shuffle
+            shuffleBtn.click();
+            break;
+    }
+});
+</body>
+</html>
