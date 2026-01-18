@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Music Media Player</title>
+<title>Metal Radio Player</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
     height: 100vh;
     background: #0a0a0a;
     color: #eee;
+    font-family: Arial, sans-serif;
 }
 
 #main {
@@ -50,10 +50,53 @@ body {
     opacity: 0.7;
 }
 
-/* ===== AUDIO ===== */
-#audio-player audio {
-    width: 100%;
+/* ===== CUSTOM PLAYER ===== */
+#audio {
+    display: none;
+}
+
+#player-ui {
+    background: #000;
+    border: 1px solid #330000;
+    border-radius: 10px;
+    padding: 15px;
     margin-bottom: 15px;
+}
+
+#progress-container {
+    height: 12px;
+    background: #111;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+#progress {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff1a1a, #990000);
+    box-shadow: 0 0 15px rgba(255,0,0,0.6);
+}
+
+#playhead {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ff1a1a;
+    box-shadow: 0 0 12px rgba(255,0,0,0.9);
+    pointer-events: none;
+}
+
+#time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    opacity: 0.8;
+    margin-top: 6px;
 }
 
 /* ===== CONTROLS ===== */
@@ -105,16 +148,26 @@ body {
 <div id="main">
 
     <div id="now-playing">
-        <img id="now-art" src="" alt="Now Playing">
+        <img id="now-art" src="">
         <div>
             <div id="now-title">—</div>
             <div id="now-channel">—</div>
         </div>
     </div>
 
-    <div id="audio-player">
-        <audio id="audio" controls></audio>
+    <!-- CUSTOM PLAYER -->
+    <div id="player-ui">
+        <div id="progress-container">
+            <div id="progress"></div>
+            <div id="playhead"></div>
+        </div>
+        <div id="time">
+            <span id="current">0:00</span>
+            <span id="duration">0:00</span>
+        </div>
     </div>
+
+    <audio id="audio"></audio>
 
     <div class="controls">
         <button class="btn" id="prevBtn">⏮ Prev</button>
@@ -125,8 +178,7 @@ body {
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-
+/* ===== CONFIG ===== */
 const FALLBACK_THUMB = 'thumbs/Default.gif';
 
 const channels = {
@@ -137,10 +189,6 @@ const channels = {
             { file: 'mp3/thrashmetal/Anthrax - Caught In A Mosh.mp3', title: 'Anthrax - Caught In A Mosh', thumb: 'thumbs/thrashmetal/Anthrax - Caught In A Mosh.jpg' },
             { file: 'mp3/thrashmetal/Evildead - Gone Shooting.mp3', title: 'Evildead - Gone Shooting', thumb: 'thumbs/thrashmetal/Evildead - Gone Shooting.jpg' },
             { file: 'mp3/thrashmetal/Mortal Sin - Voyage of the Disturbed.mp3', title: 'Mortal Sin - Voyage of the Disturbed', thumb: 'thumbs/thrashmetal/Mortal Sin - Voyage of the Disturbed.jpg' },
-            { file: 'mp3/thrashmetal/Lich King - We Came To Conquer.mp3', title: 'Lich King - We Came To Conquer', thumb: 'thumbs/thrashmetal/Lich King - We Came To Conquer.jpg' },
-            { file: 'mp3/thrashmetal/Artillery - Terror Squad.mp3', title: 'Artillery - Terror Squad', thumb: 'thumbs/thrashmetal/Artillery - Terror Squad.jpg' },
-            { file: 'mp3/thrashmetal/Lost Society - KILL Those Who Oppose Me.mp3', title: 'Lost Society - KILL Those Who Oppose Me', thumb: 'thumbs/thrashmetal/Lost Society - KILL Those Who Oppose Me.jpg' },
-            { file: 'mp3/thrashmetal/Droys - Cannibal New Year.mp3', title: 'Droys - Cannibal New Year', thumb: 'thumbs/thrashmetal/Droys - Cannibal New Year.jpg' },
             { file: 'mp3/thrashmetal/Sodom - Agent Orange.mp3', title: 'Sodom - Agent Orange', thumb: 'thumbs/thrashmetal/Sodom - Agent Orange.jpg' }
         ]
     },
@@ -154,23 +202,20 @@ const channels = {
     }
 };
 
-/* ================= STATE ================= */
-
+/* ===== STATE ===== */
 let currentChannel = 'ThrashMetal';
 let playlist = [];
-let playBag = [];     // shuffled order
-let history = [];     // for Prev
+let playBag = [];
+let history = [];
 
 const audio = document.getElementById('audio');
 const nowArt = document.getElementById('now-art');
 const nowTitle = document.getElementById('now-title');
 const nowChannel = document.getElementById('now-channel');
 
-/* ================= SHUFFLE BAG ================= */
-
+/* ===== SHUFFLE BAG ===== */
 function refillBag() {
-    playBag = playlist.map((_, i) => i)
-        .sort(() => Math.random() - 0.5);
+    playBag = playlist.map((_, i) => i).sort(() => Math.random() - 0.5);
 }
 
 function nextIndex() {
@@ -182,75 +227,87 @@ function nextIndex() {
 
 function prevIndex() {
     if (history.length > 1) {
-        history.pop(); // remove current
+        history.pop();
         return history[history.length - 1];
     }
     return history[0];
 }
 
-/* ================= PLAYBACK ================= */
-
-function playTrack(index) {
-    const track = playlist[index];
-    audio.src = track.file;
+/* ===== PLAYBACK ===== */
+function playTrack(i) {
+    const t = playlist[i];
+    audio.src = t.file;
     audio.play();
 
-    nowArt.src = track.thumb || FALLBACK_THUMB;
+    nowArt.src = t.thumb || FALLBACK_THUMB;
     nowArt.onerror = () => nowArt.src = FALLBACK_THUMB;
 
-    nowTitle.textContent = track.title;
+    nowTitle.textContent = t.title;
     nowChannel.textContent = channels[currentChannel].name;
 }
 
-/* ================= CONTROLS ================= */
-
-function playNext() {
-    playTrack(nextIndex());
-}
-
-function playPrev() {
-    playTrack(prevIndex());
-}
-
-/* ================= CHANNELS ================= */
-
+/* ===== CHANNELS ===== */
 function switchChannel(ch) {
     currentChannel = ch;
     playlist = channels[ch].tracks;
     history = [];
     refillBag();
     renderChannels();
-    playNext(); // random start
+    playTrack(nextIndex());
 }
 
 function renderChannels() {
     const panel = document.getElementById('channels-panel');
     panel.innerHTML = '';
-
     Object.keys(channels).forEach(ch => {
         const btn = document.createElement('button');
-        btn.className = 'channel-btn';
+        btn.className = 'channel-btn' + (ch === currentChannel ? ' active' : '');
         btn.textContent = channels[ch].name;
-        if (ch === currentChannel) btn.classList.add('active');
         btn.onclick = () => switchChannel(ch);
         panel.appendChild(btn);
     });
 }
 
-/* ================= EVENTS ================= */
+/* ===== PROGRESS BAR ===== */
+const progress = document.getElementById('progress');
+const playhead = document.getElementById('playhead');
+const container = document.getElementById('progress-container');
+const currentEl = document.getElementById('current');
+const durationEl = document.getElementById('duration');
 
-audio.addEventListener('ended', playNext);
-document.getElementById('nextBtn').onclick = playNext;
-document.getElementById('prevBtn').onclick = playPrev;
+audio.addEventListener('timeupdate', () => {
+    const pct = (audio.currentTime / audio.duration) * 100 || 0;
+    progress.style.width = pct + '%';
+    playhead.style.left = pct + '%';
+    currentEl.textContent = format(audio.currentTime);
+});
 
-/* ================= INIT ================= */
+audio.addEventListener('loadedmetadata', () => {
+    durationEl.textContent = format(audio.duration);
+});
 
+container.onclick = e => {
+    const r = container.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+};
+
+function format(t) {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+/* ===== EVENTS ===== */
+audio.addEventListener('ended', () => playTrack(nextIndex()));
+document.getElementById('nextBtn').onclick = () => playTrack(nextIndex());
+document.getElementById('prevBtn').onclick = () => playTrack(prevIndex());
+
+/* ===== INIT ===== */
 renderChannels();
 switchChannel(currentChannel);
 </script>
 
 </body>
 </html>
-
 
 
