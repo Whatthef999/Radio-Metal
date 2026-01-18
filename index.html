@@ -337,6 +337,64 @@ function fmt(t) {
 
 renderChannels();
 switchChannel(currentChannel);
+
+/* ===== MEDIA SESSION (Lockscreen + Notification Controls) ===== */
+if ('mediaSession' in navigator) {
+
+    function updateMediaSession(track) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title,
+            artist: channels[currentChannel].name,
+            artwork: [
+                { src: track.thumb || FALLBACK_THUMB, sizes: '512x512', type: 'image/jpeg' }
+            ]
+        });
+    }
+
+    function updatePlaybackState() {
+        navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+    }
+
+    function updatePositionState() {
+        if ('setPositionState' in navigator.mediaSession) {
+            navigator.mediaSession.setPositionState({
+                duration: audio.duration || 0,
+                playbackRate: audio.playbackRate || 1,
+                position: audio.currentTime || 0
+            });
+        }
+    }
+
+    navigator.mediaSession.setActionHandler('play', () => {
+        audio.play();
+        playPause.textContent = '⏸';
+        updatePlaybackState();
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+        audio.pause();
+        playPause.textContent = '▶';
+        updatePlaybackState();
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playTrack(prevIndex());
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playTrack(nextIndex());
+    });
+
+    const origPlayTrack = playTrack;
+    playTrack = (i) => {
+        origPlayTrack(i);
+        updateMediaSession(playlist[i]);
+        updatePlaybackState();
+    };
+
+    audio.addEventListener('timeupdate', updatePositionState);
+    audio.addEventListener('loadedmetadata', updatePositionState);
+}
 </script>
 
 </body>
