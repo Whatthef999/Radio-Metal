@@ -8,7 +8,6 @@
 <style>
 body {
     font-family: Arial, sans-serif;
-    display: flex;
     margin: 0;
     height: 100vh;
     background: #0a0a0a;
@@ -16,7 +15,7 @@ body {
 }
 
 #main {
-    flex: 1;
+    height: 100%;
     display: flex;
     flex-direction: column;
     padding: 20px;
@@ -42,14 +41,9 @@ body {
     box-shadow: 0 0 30px rgba(255,0,0,0.35);
 }
 
-#now-info {
-    flex: 1;
-}
-
 #now-title {
     font-size: 1.5em;
     font-weight: bold;
-    margin-bottom: 8px;
 }
 
 #now-channel {
@@ -57,12 +51,9 @@ body {
 }
 
 /* ===== AUDIO ===== */
-#audio-player {
-    margin-bottom: 15px;
-}
-
 #audio-player audio {
     width: 100%;
+    margin-bottom: 15px;
 }
 
 /* ===== CONTROLS ===== */
@@ -83,12 +74,6 @@ body {
     color: #fff;
 }
 
-.btn.off {
-    background: linear-gradient(180deg, #333, #111);
-    border-color: #333;
-    color: #aaa;
-}
-
 /* ===== CHANNEL PANEL ===== */
 #channels-panel {
     display: grid;
@@ -106,7 +91,6 @@ body {
     font-weight: bold;
     color: #fff;
     cursor: pointer;
-    text-align: center;
 }
 
 .channel-btn.active {
@@ -120,10 +104,9 @@ body {
 
 <div id="main">
 
-    <!-- NOW PLAYING -->
     <div id="now-playing">
         <img id="now-art" src="" alt="Now Playing">
-        <div id="now-info">
+        <div>
             <div id="now-title">—</div>
             <div id="now-channel">—</div>
         </div>
@@ -135,13 +118,10 @@ body {
 
     <div class="controls">
         <button class="btn" id="prevBtn">⏮ Prev</button>
-        <button class="btn" id="shuffleBtn">🔀 Shuffle: ON</button>
         <button class="btn" id="nextBtn">⏭ Next</button>
     </div>
 
-    <!-- CHANNELS -->
     <div id="channels-panel"></div>
-
 </div>
 
 <script>
@@ -177,33 +157,41 @@ const channels = {
 /* ================= STATE ================= */
 
 let currentChannel = 'ThrashMetal';
-let playlist = channels[currentChannel].tracks;
-let currentIndex = 0;
-
-let shuffleEnabled = true;
-let shuffleQueue = [];
-let shufflePos = 0;
+let playlist = [];
+let playBag = [];     // shuffled order
+let history = [];     // for Prev
 
 const audio = document.getElementById('audio');
 const nowArt = document.getElementById('now-art');
 const nowTitle = document.getElementById('now-title');
 const nowChannel = document.getElementById('now-channel');
 
-/* ================= SHUFFLE ================= */
+/* ================= SHUFFLE BAG ================= */
 
-function buildShuffleQueue(start = 0) {
-    shuffleQueue = playlist.map((_, i) => i).sort(() => Math.random() - 0.5);
-    const pos = shuffleQueue.indexOf(start);
-    [shuffleQueue[0], shuffleQueue[pos]] = [shuffleQueue[pos], shuffleQueue[0]];
-    shufflePos = 0;
+function refillBag() {
+    playBag = playlist.map((_, i) => i)
+        .sort(() => Math.random() - 0.5);
+}
+
+function nextIndex() {
+    if (playBag.length === 0) refillBag();
+    const idx = playBag.shift();
+    history.push(idx);
+    return idx;
+}
+
+function prevIndex() {
+    if (history.length > 1) {
+        history.pop(); // remove current
+        return history[history.length - 1];
+    }
+    return history[0];
 }
 
 /* ================= PLAYBACK ================= */
 
 function playTrack(index) {
-    currentIndex = index;
     const track = playlist[index];
-
     audio.src = track.file;
     audio.play();
 
@@ -214,29 +202,26 @@ function playTrack(index) {
     nowChannel.textContent = channels[currentChannel].name;
 }
 
-function next() {
-    if (shuffleEnabled) {
-        shufflePos++;
-        if (shufflePos >= shuffleQueue.length) {
-            buildShuffleQueue(currentIndex);
-            shufflePos = 1;
-        }
-        playTrack(shuffleQueue[shufflePos]);
-    } else {
-        playTrack((currentIndex + 1) % playlist.length);
-    }
+/* ================= CONTROLS ================= */
+
+function playNext() {
+    playTrack(nextIndex());
 }
 
-function prev() {
-    if (shuffleEnabled) {
-        shufflePos = (shufflePos - 1 + shuffleQueue.length) % shuffleQueue.length;
-        playTrack(shuffleQueue[shufflePos]);
-    } else {
-        playTrack((currentIndex - 1 + playlist.length) % playlist.length);
-    }
+function playPrev() {
+    playTrack(prevIndex());
 }
 
-/* ================= CHANNEL RENDER ================= */
+/* ================= CHANNELS ================= */
+
+function switchChannel(ch) {
+    currentChannel = ch;
+    playlist = channels[ch].tracks;
+    history = [];
+    refillBag();
+    renderChannels();
+    playNext(); // random start
+}
 
 function renderChannels() {
     const panel = document.getElementById('channels-panel');
@@ -246,46 +231,26 @@ function renderChannels() {
         const btn = document.createElement('button');
         btn.className = 'channel-btn';
         btn.textContent = channels[ch].name;
-
         if (ch === currentChannel) btn.classList.add('active');
-
-        btn.onclick = () => {
-            currentChannel = ch;
-            playlist = channels[ch].tracks;
-            buildShuffleQueue(0);
-            renderChannels();
-            playTrack(0);
-        };
-
+        btn.onclick = () => switchChannel(ch);
         panel.appendChild(btn);
     });
 }
 
 /* ================= EVENTS ================= */
 
-audio.addEventListener('ended', next);
-document.getElementById('nextBtn').onclick = next;
-document.getElementById('prevBtn').onclick = prev;
-
-document.getElementById('shuffleBtn').onclick = function () {
-    shuffleEnabled = !shuffleEnabled;
-    this.textContent = `🔀 Shuffle: ${shuffleEnabled ? 'ON' : 'OFF'}`;
-    this.classList.toggle('off', !shuffleEnabled);
-    if (shuffleEnabled) buildShuffleQueue(currentIndex);
-};
+audio.addEventListener('ended', playNext);
+document.getElementById('nextBtn').onclick = playNext;
+document.getElementById('prevBtn').onclick = playPrev;
 
 /* ================= INIT ================= */
 
-buildShuffleQueue(0);
 renderChannels();
-playTrack(0);
+switchChannel(currentChannel);
 </script>
 
 </body>
 </html>
-
-
-
 
 
 
