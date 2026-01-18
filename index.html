@@ -15,28 +15,6 @@ body {
     color: #eee;
 }
 
-#sidebar {
-    width: 220px;
-    background: #111;
-    padding: 20px;
-    border-right: 1px solid #330000;
-    overflow-y: auto;
-}
-
-.channel-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    background: #222;
-    border: 1px solid #330000;
-    border-radius: 5px;
-    color: #fff;
-    cursor: pointer;
-    text-align: left;
-}
-.channel-btn.active { background: #330000; }
-
 #main {
     flex: 1;
     display: flex;
@@ -92,7 +70,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .btn {
@@ -111,42 +89,34 @@ body {
     color: #aaa;
 }
 
-/* ===== PLAYLIST ===== */
-#playlist {
-    flex: 1;
+/* ===== CHANNEL PANEL ===== */
+#channels-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
 }
 
-.track {
-    display: flex;
-    gap: 10px;
-    padding: 10px;
+.channel-btn {
     background: #111;
-    border-radius: 6px;
+    border: 1px solid #330000;
+    border-radius: 10px;
+    padding: 20px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
     cursor: pointer;
-    border-left: 4px solid transparent;
+    text-align: center;
 }
 
-.track.active {
-    border-left: 4px solid #ff0000;
-    background: #2a0000;
-}
-
-.track img {
-    width: 60px;
-    height: 60px;
-    border-radius: 4px;
-    object-fit: cover;
+.channel-btn.active {
+    background: linear-gradient(180deg, #ff1a1a, #990000);
+    box-shadow: 0 0 20px rgba(255,0,0,0.4);
 }
 </style>
 </head>
 
 <body>
-
-<div id="sidebar"></div>
 
 <div id="main">
 
@@ -169,7 +139,9 @@ body {
         <button class="btn" id="nextBtn">⏭ Next</button>
     </div>
 
-    <div id="playlist"></div>
+    <!-- CHANNELS -->
+    <div id="channels-panel"></div>
+
 </div>
 
 <script>
@@ -180,7 +152,6 @@ const FALLBACK_THUMB = 'thumbs/Default.gif';
 const channels = {
     ThrashMetal: {
         name: 'Thrash Metal',
-        defaultThumb: 'thumbs/Default.gif',
         tracks: [
             { file: 'mp3/thrashmetal/Exodus - Fabulous Disaster.mp3', title: 'Exodus - Fabulous Disaster', thumb: 'thumbs/thrashmetal/Exodus - Fabulous Disaster.jpg' },
             { file: 'mp3/thrashmetal/Anthrax - Caught In A Mosh.mp3', title: 'Anthrax - Caught In A Mosh', thumb: 'thumbs/thrashmetal/Anthrax - Caught In A Mosh.jpg' },
@@ -194,9 +165,9 @@ const channels = {
         ]
     },
     Rock: {
-        defaultThumb: 'thumbs/Default.gif',
+        name: 'Rock',
         tracks: [
-            { file: 'mp3/rock/ACDC-HighVoltage.mp3', title: 'AC DC- High Voltage', thumb: 'thumbs/rock/ACDC-HighVoltage.jpg' },
+            { file: 'mp3/rock/ACDC-HighVoltage.mp3', title: 'AC DC - High Voltage', thumb: 'thumbs/rock/ACDC-HighVoltage.jpg' },
             { file: 'mp3/rock/ACDC-LiveWire.mp3', title: 'AC DC - Live Wire', thumb: 'thumbs/rock/ACDC-LiveWire.jpg' },
             { file: 'mp3/rock/ACDC-TNT.mp3', title: 'AC DC - T.N.T', thumb: 'thumbs/rock/ACDC-TNT.jpg' }
         ]
@@ -218,12 +189,6 @@ const nowArt = document.getElementById('now-art');
 const nowTitle = document.getElementById('now-title');
 const nowChannel = document.getElementById('now-channel');
 
-/* ================= HELPERS ================= */
-
-function resolveThumb(track) {
-    return track.thumb || channels[currentChannel].defaultThumb || FALLBACK_THUMB;
-}
-
 /* ================= SHUFFLE ================= */
 
 function buildShuffleQueue(start = 0) {
@@ -242,14 +207,11 @@ function playTrack(index) {
     audio.src = track.file;
     audio.play();
 
-    // Update big artwork
-    nowArt.src = resolveThumb(track);
+    nowArt.src = track.thumb || FALLBACK_THUMB;
     nowArt.onerror = () => nowArt.src = FALLBACK_THUMB;
 
     nowTitle.textContent = track.title;
-    nowChannel.textContent = currentChannel;
-
-    highlight();
+    nowChannel.textContent = channels[currentChannel].name;
 }
 
 function next() {
@@ -274,49 +236,17 @@ function prev() {
     }
 }
 
-/* ================= RENDER ================= */
-
-function renderPlaylist() {
-    const pl = document.getElementById('playlist');
-    pl.innerHTML = '';
-
-    playlist.forEach((track, i) => {
-        const div = document.createElement('div');
-        div.className = 'track';
-
-        const img = document.createElement('img');
-        img.src = resolveThumb(track);
-        img.onerror = () => img.src = FALLBACK_THUMB;
-
-        const span = document.createElement('span');
-        span.textContent = track.title;
-
-        div.appendChild(img);
-        div.appendChild(span);
-        div.onclick = () => {
-            if (shuffleEnabled) buildShuffleQueue(i);
-            playTrack(i);
-        };
-
-        pl.appendChild(div);
-    });
-}
-
-function highlight() {
-    const idx = shuffleEnabled ? shuffleQueue[shufflePos] : currentIndex;
-    document.querySelectorAll('.track').forEach((el, i) =>
-        el.classList.toggle('active', i === idx)
-    );
-}
+/* ================= CHANNEL RENDER ================= */
 
 function renderChannels() {
-    const sb = document.getElementById('sidebar');
-    sb.innerHTML = '';
+    const panel = document.getElementById('channels-panel');
+    panel.innerHTML = '';
 
     Object.keys(channels).forEach(ch => {
         const btn = document.createElement('button');
         btn.className = 'channel-btn';
-        btn.textContent = ch;
+        btn.textContent = channels[ch].name;
+
         if (ch === currentChannel) btn.classList.add('active');
 
         btn.onclick = () => {
@@ -324,11 +254,10 @@ function renderChannels() {
             playlist = channels[ch].tracks;
             buildShuffleQueue(0);
             renderChannels();
-            renderPlaylist();
             playTrack(0);
         };
 
-        sb.appendChild(btn);
+        panel.appendChild(btn);
     });
 }
 
@@ -349,16 +278,11 @@ document.getElementById('shuffleBtn').onclick = function () {
 
 buildShuffleQueue(0);
 renderChannels();
-renderPlaylist();
 playTrack(0);
 </script>
 
 </body>
 </html>
-
-
-
-
 
 
 
